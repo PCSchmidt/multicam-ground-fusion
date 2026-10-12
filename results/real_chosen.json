@@ -1,0 +1,14 @@
+{
+ "O": {
+  "score": 0.0,
+  "meas_sigma_m": 0.75,
+  "accel_sigma": 2.0,
+  "min_hits": 3
+ },
+ "D": {
+  "score": 0.9,
+  "meas_sigma_m": 0.75,
+  "accel_sigma": 2.0,
+  "min_hits": 3
+ }
+}

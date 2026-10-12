@@ -52,3 +52,13 @@ def test_mota_identity(n_frames: int, n_people: int) -> None:
     r = evaluate(g, [{} for _ in g])
     assert r.tp == 0 and r.fn == r.n_gt and r.fp == 0
     assert r.mota == (1.0 - 1.0 if r.n_gt else 1.0)
+
+
+def test_per_frame_stats_sum_to_the_totals() -> None:
+    g = line(20, (0, 1))
+    p: list[Frame] = [{(7 if t < 10 else 8): f[0]} for t, f in enumerate(g)]  # person 1 never tracked
+    r = evaluate(g, p)
+    assert sum(x[0] for x in r.frame_stats) == r.n_gt
+    assert sum(x[1] for x in r.frame_stats) == r.fn
+    assert sum(x[2] for x in r.frame_stats) == r.fp
+    assert sum(x[3] for x in r.frame_stats) == r.id_switches == 1

@@ -33,6 +33,9 @@ class MotResult:
     fp_tracks: tuple[tuple[int, int], ...] = field(
         default=()
     )  # (frame, track) unmatched predictions
+    frame_stats: tuple[tuple[int, int, int, int], ...] = field(
+        default=()
+    )  # per frame: (n_gt, fn, fp, id_switches), for block bootstrap
 
 
 def _dist(a: tuple[float, float], b: tuple[float, float]) -> float:
@@ -50,6 +53,7 @@ def evaluate(gt: list[Frame], pred: list[Frame], threshold_m: float = 0.5) -> Mo
     events: list[tuple[int, int, int, int]] = []
     fp_tracks: list[tuple[int, int]] = []
     pair_count: dict[tuple[int, int], int] = {}
+    stats: list[tuple[int, int, int, int]] = []
     for t, (g, p) in enumerate(zip(gt, pred, strict=True)):
         n_gt += len(g)
         n_pred += len(p)
@@ -65,6 +69,7 @@ def evaluate(gt: list[Frame], pred: list[Frame], threshold_m: float = 0.5) -> Mo
             for r, c in zip(*linear_sum_assignment(cost), strict=True):
                 if cost[r, c] <= threshold_m:
                     matches[gl[int(r)]] = pl[int(c)]
+        sw_before = idsw
         for gid, tid in matches.items():
             if gid in last and last[gid] != tid:
                 idsw += 1
@@ -76,6 +81,7 @@ def evaluate(gt: list[Frame], pred: list[Frame], threshold_m: float = 0.5) -> Mo
         fn += len(g) - len(matches)
         fp += len(p) - len(matches)
         fp_tracks.extend((t, tid) for tid in p if tid not in set(matches.values()))
+        stats.append((len(g), len(g) - len(matches), len(p) - len(matches), idsw - sw_before))
         prev = matches
     # IDF1: best one-to-one assignment of whole ground-truth trajectories to whole track trajectories
     gids = sorted({a for a, _ in pair_count})
@@ -101,4 +107,5 @@ def evaluate(gt: list[Frame], pred: list[Frame], threshold_m: float = 0.5) -> Mo
         idtp=idtp,
         switch_events=tuple(events),
         fp_tracks=tuple(fp_tracks),
+        frame_stats=tuple(stats),
     )
