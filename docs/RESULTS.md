@@ -28,4 +28,4 @@ With the first default (`meas_sigma_m=0.3`) the two-camera FP count was about 19
 
 ## Not measured
 
-Real detections (YOLO + ByteTrack), Wildtrack / PETS 2009, IDF1, crossing-target identity swaps, drift detection recall, BEV rendering.
+Real footage is now measured separately: see [RESULTS_REAL.md](RESULTS_REAL.md). Still not measured: PETS 2009, a stricter spawning rule, crossing-target identity swaps in isolation, BEV rendering.

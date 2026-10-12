@@ -2,7 +2,7 @@
 
 ![CI](https://github.com/PCSchmidt/multicam-ground-fusion/actions/workflows/ci.yml/badge.svg)
 
-**Status: v0.1, portfolio project.** Homography projection, Kalman fusion, Mahalanobis-gated association and plausibility flags are built and tested, and validated on a **synthetic** multi-camera scene. There is no real detector (YOLO / ByteTrack), no Wildtrack or PETS data, and no bird's-eye-view renderer yet ([Results](#results), [Limitations](#limitations)).
+**Status: v0.2, portfolio project.** Homography projection, Kalman fusion, Mahalanobis-gated association and plausibility flags are built and tested, validated on a synthetic scene, and now **measured on real footage (Wildtrack, seven cameras)**. The real-data result is sobering: with perfect boxes the tracker scores MOTA 0.79 (0.92 if it reports only live tracks), and with an off-the-shelf COCO detector it scores **-0.17** ([Real-data results](#real-data-results-wildtrack), [Limitations](#limitations)).
 
 ```text
 $ python examples/demo.py          # two cameras, two people; one person starts sprinting
@@ -41,7 +41,7 @@ It is a poor fit if cameras do not share a ground plane (stairs, multiple floors
 
 A tracker that always attaches a detection to the nearest track will happily teleport a track onto a different person. Statistical gating says "that detection is too unlikely to belong to this track", so a new track is started instead, and the refusal is counted. The same logic applies to speed: a flag you can see is better than motion that has been quietly smoothed.
 
-**What's real and what's not.** The geometry, filter, gating, assignment and flags are real, tested code. The scene, the detections and every number below are **synthetic**. Real detector noise, calibration error and crowding have not been tested.
+**What's real and what's not.** The geometry, filter, gating, assignment and flags are real, tested code. The first results table below is **synthetic**; it was the only evidence until v0.2 and it did not predict real behaviour. The section [Real-data results](#real-data-results-wildtrack) is on Wildtrack footage with calibrated cameras and ground-truth positions.
 
 ## At a glance
 
@@ -52,7 +52,7 @@ A tracker that always attaches a detection to the nearest track will happily tel
 | Gate | chi-square at 99%, 2 degrees of freedom on squared Mahalanobis distance |
 | Measured (synthetic, 10 held-out seeds) | two cameras: MOTA 0.93-0.96; one camera: 0.61-0.67 (it sees only part of the scene) |
 | Stack | NumPy, SciPy only; no detector, no deep learning |
-| Tests | 10, including property-based; `mypy --strict`; ruff |
+| Tests | 18, including property-based; `mypy --strict`; ruff |
 
 ## Architecture at a glance
 
@@ -119,7 +119,7 @@ uv venv && uv pip install -e ".[dev]"
 
 python examples/demo.py              # the output shown above
 python scripts/benchmark.py          # synthetic MOTA / ID-switch table (about a minute)
-pytest -q                            # 10 passed
+pytest -q                            # 18 passed
 ```
 
 ```python
@@ -175,9 +175,29 @@ Synthetic only: four targets moving in a 40 x 40 m yard for 200 frames at 10 Hz,
 - ID switches are a few per run in every setting, and slightly higher with two cameras at low dropout (3.1 vs 1.2); a camera hand-over is a plausible cause, but it was not tested. With 10 seeds, a difference of a few switches is noise.
 - **A wrong noise model is expensive.** With the first default (0.3 m) two-camera runs produced about 194 false tracks per run and MOTA 0.72: the real per-axis ground error from 3 px of noise was about 0.33 m, so the gate refused valid detections and spawned duplicates. Raising it to 0.5 fixed it. Full detail: [docs/RESULTS.md](docs/RESULTS.md).
 
+## Real-data results (Wildtrack)
+
+Pre-registered in [docs/PROTOCOL_REAL.md](docs/PROTOCOL_REAL.md), tuned on the first 200 annotated frames and run once on the last 200 (4,733 person-frames, 2 frames per second). Full numbers, intervals and caveats: [docs/RESULTS_REAL.md](docs/RESULTS_REAL.md).
+
+| Input | Variant | MOTA [95% block-bootstrap] | IDF1 | ID switches |
+| --- | --- | --- | --- | --- |
+| Dataset's own boxes | all 7 cameras fused | 0.793 [0.740, 0.844] | 0.63 | 145 |
+| | ... reporting only live tracks (exploratory) | 0.917 [0.888, 0.944] | 0.67 | 158 |
+| | median / best single camera | 0.582 / 0.761 | | |
+| COCO Faster R-CNN | all 7 cameras fused | **-0.169** [-0.252, -0.068] | 0.38 | 257 |
+| | ... reporting only live tracks (exploratory) | 0.102 [0.033, 0.168] | 0.41 | 253 |
+| | median / best single camera | 0.006 / 0.241 | | |
+
+- The synthetic MOTA of 0.93 to 0.96 did not transfer.
+- With perfect boxes, fusion beats the median single camera by 0.21, and gating matters (removing it costs 0.11 MOTA and nearly triples identity switches). Most of the false positives are coasting tracks reported after identity is lost.
+- With a real detector, false positives dominate (4,555 on 4,733 person-frames) and **fusion loses to the best single camera**. The tracker starts a track from any unmatched box, so errors add across cameras. I did not test a stricter spawning rule.
+- The 12 m/s plausibility flag never fired at 2 frames per second; an exploratory 4 m/s ceiling flagged only tracks near errors but caught 23 to 34% of identity switches.
+- Dataset copy from an unofficial mirror (the official host was unreachable); nothing from it is committed.
+
 ## Limitations
 
-- **Synthetic scene only.** No real detector noise, occlusion, crowding or calibration error; no Wildtrack or PETS 2009.
+- **One real scene.** Wildtrack only: 200 s of test footage at 2 frames per second, one off-the-shelf detector, no PETS 2009. The synthetic scene overstated performance.
+- **Spawning and output policy.** The tracker starts a track from any unmatched detection and reports coasting tracks, which is what makes it fragile with real detections (see the real-data results). A stricter policy is untested.
 - **Constant-velocity motion.** Sharp turns and stops are modelled only through process noise.
 - **One fixed noise level.** Real ground-plane error grows with distance from the camera; per-detection covariance from the homography's Jacobian is the obvious next step. This is the main risk for real data, as the tuning story above shows.
 - **No appearance.** Geometry only, so crossing targets can swap identities.
@@ -193,12 +213,12 @@ Everything runs locally on a CPU; the benchmark takes about a minute. There is n
 
 ### Data and keys
 
-No keys and no external data: the scene is generated from a seed. Real footage later should be a public dataset (Wildtrack, PETS 2009) or synthetic.
+No keys. The synthetic benchmark needs no data. The real-data study needs the Wildtrack dataset (about 6.8 GB, research use, cite Chavdarova et al., CVPR 2018) and downloads COCO detector weights from pytorch.org; both stay in git-ignored `data/` and are never committed. The extra dependencies (PyTorch, torchvision) are only needed to re-run the detector.
 
 ### Verify the claims (a reviewer's path)
 
 ```bash
-pytest -q                          # 10 passed, includes a test that two cameras beat one in the overlap scene
+pytest -q                          # 18 passed, includes a test that two cameras beat one in the overlap scene
 mypy src tests scripts             # strict, clean
 python examples/demo.py            # the tracks and flags shown at the top
 python scripts/benchmark.py        # the table above (10 seeds x 6 settings)
@@ -208,7 +228,8 @@ python scripts/benchmark.py        # the table above (10 seeds x 6 settings)
 
 | Doc | What it covers |
 | --- | --- |
-| [docs/RESULTS.md](docs/RESULTS.md) | protocol, the table, how to read it, the noise-model finding |
+| [docs/RESULTS.md](docs/RESULTS.md) | the synthetic protocol, the table, the noise-model finding |
+| [docs/PROTOCOL_REAL.md](docs/PROTOCOL_REAL.md), [docs/RESULTS_REAL.md](docs/RESULTS_REAL.md) | the pre-registered Wildtrack study and its results |
 | [examples/demo.py](examples/demo.py) | the worked example above |
 | [src/multicam_fusion/tracker.py](src/multicam_fusion/tracker.py) | association, Kalman update, track life and flags |
 

@@ -23,7 +23,6 @@ from multicam_fusion.mot import Frame, MotResult, evaluate
 from multicam_fusion.tracker import Detection, GroundPlaneTracker, TrackerConfig
 from multicam_fusion.wildtrack import (
     CAMERAS,
-    GtPerson,
     frame_numbers,
     load_cameras,
     load_frame,
