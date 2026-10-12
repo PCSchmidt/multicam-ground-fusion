@@ -1,5 +1,7 @@
 # multicam-ground-fusion — one map, many cameras: tracking people across camera views with checks that catch impossible motion
 
+![CI](https://github.com/PCSchmidt/multicam-ground-fusion/actions/workflows/ci.yml/badge.svg)
+
 **Status: v0.1, portfolio project.** Homography projection, Kalman fusion, Mahalanobis-gated association and plausibility flags are built and tested, and validated on a **synthetic** multi-camera scene. There is no real detector (YOLO / ByteTrack), no Wildtrack or PETS data, and no bird's-eye-view renderer yet ([Results](#results), [Limitations](#limitations)).
 
 ```text
