@@ -42,7 +42,7 @@ Plan: [PROTOCOL_REAL.md](PROTOCOL_REAL.md), pushed before any detector or tracke
 ## What this does and does not show
 
 - **Shown:** the tracker's geometry is sound (calibration check: median 0.07 to 0.13 m, tracker with clean boxes gets 0.92 with live output). The weaknesses are in what the tracker does with imperfect detections: immediate track creation from any unmatched box, coasting-track output, and no identity features. Gating clearly helps.
-- **Not shown:** that a better spawning rule (for example requiring support from two cameras or two frames) would fix it. I have not tried it, and the test frames are now used. A follow-up needs a new pre-registered split or a second scene.
+- **Not shown:** that a better spawning rule (for example requiring support from two cameras or two frames) would fix it. I had not tried it when this was written. The follow-up ([RESULTS_SECOND_SCENE.md](RESULTS_SECOND_SCENE.md)) tried a stricter confirmation rule and a camera-consensus rule on three other sequences: they helped by only 0.02 to 0.04 MOTA, and the tracker was nearly perfect there with clean boxes, so crowding, frame rate and detector localisation explain most of the Wildtrack numbers.
 - **Not claimed:** that multi-camera fusion is not worth it. This tests this tracker, with this detector, on this scene, at 2 frames per second.
 
 ## Process notes and limits
