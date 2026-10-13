@@ -33,6 +33,9 @@ class TrackerConfig:
         1  # a track is confirmed only after updates in this many distinct time steps
     )
     report_coasting: bool = True  # False: report only tracks updated in the current step
+    confirm_cameras: int = (
+        1  # a track is reported only after updates from this many distinct cameras (ever)
+    )
 
 
 @dataclass
@@ -43,6 +46,7 @@ class Track:
     hits: int = 1
     misses: int = 0
     frames_hit: int = 0  # distinct time steps in which the track was updated or created
+    cameras: set[str] = field(default_factory=set)  # cameras that have created or updated the track
     flags: set[str] = field(default_factory=set)
 
     @property
@@ -80,7 +84,8 @@ class GroundPlaneTracker:
         y = z - self._hmat @ t.x
         return float(y @ np.linalg.solve(s, y))
 
-    def _update(self, t: Track, z: Array) -> None:
+    def _update(self, t: Track, z: Array, camera: str) -> None:
+        t.cameras.add(camera)
         s = self._hmat @ t.p @ self._hmat.T + self._r
         k = t.p @ self._hmat.T @ np.linalg.inv(s)
         t.x = t.x + k @ (z - self._hmat @ t.x)
@@ -90,9 +95,11 @@ class GroundPlaneTracker:
         if t.speed > self.cfg.v_max_mps:
             t.flags.add("IMPLAUSIBLE_SPEED")  # flagged for review; never silently "fixed"
 
-    def _spawn(self, z: Array) -> None:
+    def _spawn(self, z: Array, camera: str) -> None:
         p = np.diag([self.cfg.meas_sigma_m**2] * 2 + [self.cfg.init_vel_sigma**2] * 2)
-        self.tracks.append(Track(self._next_id, np.array([z[0], z[1], 0.0, 0.0]), p))
+        self.tracks.append(
+            Track(self._next_id, np.array([z[0], z[1], 0.0, 0.0]), p, cameras={camera})
+        )
         self._next_id += 1
 
     # --- one time step -----------------------------------------------------------------
@@ -110,14 +117,14 @@ class GroundPlaneTracker:
                 rows, cols = linear_sum_assignment(cost)
                 for r, c in zip(rows, cols, strict=True):
                     if cost[r, c] <= self._gate:
-                        self._update(self.tracks[r], pts[c])
+                        self._update(self.tracks[r], pts[c], cam)
                         touched.add(self.tracks[r].track_id)
                         matched_dets.add(int(c))
                     else:
                         self.rejected += 1
             for c in range(len(dets)):
                 if c not in matched_dets:
-                    self._spawn(pts[c])
+                    self._spawn(pts[c], cam)
                     touched.add(self._next_id - 1)
         for t in self.tracks:
             if t.track_id in touched:
@@ -133,5 +140,6 @@ class GroundPlaneTracker:
             for t in self.tracks
             if t.hits >= self.cfg.min_hits
             and t.frames_hit >= self.cfg.confirm_frames
+            and len(t.cameras) >= self.cfg.confirm_cameras
             and (self.cfg.report_coasting or t.misses == 0)
         ]
