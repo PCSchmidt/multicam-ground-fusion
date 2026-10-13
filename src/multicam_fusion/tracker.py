@@ -28,6 +28,11 @@ class TrackerConfig:
     min_hits: int = 3  # confirmed after this many updates
     v_max_mps: float = 12.0  # physical plausibility ceiling; above it a track is flagged
     init_vel_sigma: float = 3.0
+    # Stricter track creation and output (docs/PROTOCOL_SECOND_SCENE.md). The defaults reproduce the original tracker.
+    confirm_frames: int = (
+        1  # a track is confirmed only after updates in this many distinct time steps
+    )
+    report_coasting: bool = True  # False: report only tracks updated in the current step
 
 
 @dataclass
@@ -37,6 +42,7 @@ class Track:
     p: Array
     hits: int = 1
     misses: int = 0
+    frames_hit: int = 0  # distinct time steps in which the track was updated or created
     flags: set[str] = field(default_factory=set)
 
     @property
@@ -114,10 +120,18 @@ class GroundPlaneTracker:
                     self._spawn(pts[c])
                     touched.add(self._next_id - 1)
         for t in self.tracks:
-            if t.track_id not in touched:
+            if t.track_id in touched:
+                t.frames_hit += 1
+            else:
                 t.misses += 1
         self.tracks = [t for t in self.tracks if t.misses <= self.cfg.max_misses]
         return self.confirmed()
 
     def confirmed(self) -> list[Track]:
-        return [t for t in self.tracks if t.hits >= self.cfg.min_hits]
+        return [
+            t
+            for t in self.tracks
+            if t.hits >= self.cfg.min_hits
+            and t.frames_hit >= self.cfg.confirm_frames
+            and (self.cfg.report_coasting or t.misses == 0)
+        ]
