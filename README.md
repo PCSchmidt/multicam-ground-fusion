@@ -219,6 +219,16 @@ Pre-registered in [docs/PROTOCOL_SECOND_SCENE.md](docs/PROTOCOL_SECOND_SCENE.md)
 - **Linear measurement, so a plain Kalman filter.** An extended Kalman filter would only be needed to filter in pixel space; not implemented.
 - **No real detector, no IDF1, no bird's-eye-view renderer, no drift-detection recall measurement yet.**
 
+## Known gaps against the original roadmap
+
+The project began as an item in a longer roadmap that named a larger stack and scope. These parts of that plan were **not built**; the results above say nothing about them.
+
+- YOLOv8/YOLO11 with ByteTrack as per-camera detector and tracker: a torchvision Faster R-CNN supplies detections and there is no per-camera tracker.
+- An extended Kalman filter (and `filterpy`): the filter is a linear constant-velocity Kalman filter written for this repo.
+- PETS 2009 (Wildtrack and MMPTrack were used instead).
+- An OpenCV bird's-eye-view renderer with covariance ellipses.
+- A reprojection-error drift flag: only a speed-ceiling flag exists.
+
 ## Operational notes
 
 ### What runs where
