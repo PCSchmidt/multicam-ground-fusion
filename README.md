@@ -2,7 +2,7 @@
 
 ![CI](https://github.com/PCSchmidt/multicam-ground-fusion/actions/workflows/ci.yml/badge.svg)
 
-**Status: v0.2, portfolio project.** Homography projection, Kalman fusion, Mahalanobis-gated association and plausibility flags are built and tested, validated on a synthetic scene, and now **measured on real footage (Wildtrack, seven cameras)**. The real-data result is sobering: with perfect boxes the tracker scores MOTA 0.79 (0.92 if it reports only live tracks), and with an off-the-shelf COCO detector it scores **-0.17** ([Real-data results](#real-data-results-wildtrack), [Limitations](#limitations)).
+**Status: v0.3, portfolio project.** Homography projection, Kalman fusion, Mahalanobis-gated association and plausibility flags are built and tested, validated on a synthetic scene, and now **measured on real footage (Wildtrack, seven cameras)**. The real-data result is sobering: with perfect boxes the tracker scores MOTA 0.79 (0.92 if it reports only live tracks), and with an off-the-shelf COCO detector it scores **-0.17** ([Real-data results](#real-data-results-wildtrack), [Limitations](#limitations)).
 
 ```text
 $ python examples/demo.py          # two cameras, two people; one person starts sprinting
@@ -52,7 +52,7 @@ A tracker that always attaches a detection to the nearest track will happily tel
 | Gate | chi-square at 99%, 2 degrees of freedom on squared Mahalanobis distance |
 | Measured (synthetic, 10 held-out seeds) | two cameras: MOTA 0.93-0.96; one camera: 0.61-0.67 (it sees only part of the scene) |
 | Stack | NumPy, SciPy only; no detector, no deep learning |
-| Tests | 18, including property-based; `mypy --strict`; ruff |
+| Tests | 22, including property-based; `mypy --strict`; ruff |
 
 ## Architecture at a glance
 
@@ -119,7 +119,7 @@ uv venv && uv pip install -e ".[dev]"
 
 python examples/demo.py              # the output shown above
 python scripts/benchmark.py          # synthetic MOTA / ID-switch table (about a minute)
-pytest -q                            # 18 passed
+pytest -q                            # 22 passed
 ```
 
 ```python
@@ -194,10 +194,24 @@ Pre-registered in [docs/PROTOCOL_REAL.md](docs/PROTOCOL_REAL.md), tuned on the f
 - The 12 m/s plausibility flag never fired at 2 frames per second; an exploratory 4 m/s ceiling flagged only tracks near errors but caught 23 to 34% of identity switches.
 - Dataset copy from an unofficial mirror (the official host was unreachable); nothing from it is committed.
 
+## Second-scene results (MMPTrack)
+
+Pre-registered in [docs/PROTOCOL_SECOND_SCENE.md](docs/PROTOCOL_SECOND_SCENE.md): a stricter track-creation rule designed on Wildtrack development frames, then run once on three MMPTrack sequences (4, 5 and 6 cameras, 41,632 person-frames). Full numbers: [docs/RESULTS_SECOND_SCENE.md](docs/RESULTS_SECOND_SCENE.md).
+
+| Input | Original tracker | + confirm 3 frames, live-only | + camera consensus (exploratory) |
+| --- | --- | --- | --- |
+| Dataset's boxes | MOTA 0.997 | 0.996 | 0.998 |
+| COCO detector | 0.568 [0.515, 0.624] | 0.589 [0.538, 0.642] | 0.603 [0.555, 0.654] |
+
+- With clean boxes the tracker is nearly perfect on this scene (7 identity switches in 41,632 person-frames): Wildtrack's low score came from crowding and 2 frames per second, not from the geometry.
+- With the detector, the stricter rule gained only 0.02 (I had predicted 0.3); fusion beat the median single camera in all three sequences and the best single camera in two of three.
+- The dataset copy is from an unofficial mirror, calibration conventions were inferred, and nothing from it is committed.
+
 ## Limitations
 
-- **One real scene.** Wildtrack only: 200 s of test footage at 2 frames per second, one off-the-shelf detector, no PETS 2009. The synthetic scene overstated performance.
-- **Spawning and output policy.** The tracker starts a track from any unmatched detection and reports coasting tracks, which is what makes it fragile with real detections (see the real-data results). A stricter policy is untested.
+- **Two real datasets, mixed answers.** Wildtrack (crowded, 2 frames per second) and three MMPTrack sequences (about 7 people, about 5 frames per second); one off-the-shelf detector; no PETS 2009. The synthetic scene overstated performance, and the Wildtrack figures understate what the tracker does on an easier scene.
+- **Detection quality dominates.** With clean boxes the tracker scores MOTA 0.996 on MMPTrack; with a COCO detector 0.57 to 0.60, and most of the loss is false positives and localisation (MOTA 0.84 to 0.87 at a 1 m match threshold). A better or scene-tuned detector is untested.
+- **Track-creation rules matter little.** A stricter confirmation rule and a camera-consensus rule (`confirm_frames`, `report_coasting`, `confirm_cameras`, defaults reproduce the original) changed MOTA by +0.02 to +0.04 on MMPTrack; most of the Wildtrack gain came from reporting only live tracks.
 - **Constant-velocity motion.** Sharp turns and stops are modelled only through process noise.
 - **One fixed noise level.** Real ground-plane error grows with distance from the camera; per-detection covariance from the homography's Jacobian is the obvious next step. This is the main risk for real data, as the tuning story above shows.
 - **No appearance.** Geometry only, so crossing targets can swap identities.
@@ -218,7 +232,7 @@ No keys. The synthetic benchmark needs no data. The real-data study needs the Wi
 ### Verify the claims (a reviewer's path)
 
 ```bash
-pytest -q                          # 18 passed, includes a test that two cameras beat one in the overlap scene
+pytest -q                          # 22 passed, includes a test that two cameras beat one in the overlap scene
 mypy src tests scripts             # strict, clean
 python examples/demo.py            # the tracks and flags shown at the top
 python scripts/benchmark.py        # the table above (10 seeds x 6 settings)
