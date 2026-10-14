@@ -2,7 +2,7 @@
 
 ![CI](https://github.com/PCSchmidt/multicam-ground-fusion/actions/workflows/ci.yml/badge.svg)
 
-**Status: v0.3, portfolio project.** Homography projection, Kalman fusion, Mahalanobis-gated association and plausibility flags are built and tested, validated on a synthetic scene, and now **measured on real footage (Wildtrack, seven cameras)**. The real-data result is sobering: with perfect boxes the tracker scores MOTA 0.79 (0.92 if it reports only live tracks), and with an off-the-shelf COCO detector it scores **-0.17** ([Real-data results](#real-data-results-wildtrack), [Limitations](#limitations)).
+**Status: v0.4, portfolio project.** Homography projection, Kalman fusion, Mahalanobis-gated association and plausibility flags are built and tested, validated on a synthetic scene, and now **measured on real footage (Wildtrack, seven cameras)**. The real-data result is sobering: with perfect boxes the tracker scores MOTA 0.79 (0.92 if it reports only live tracks), and with an off-the-shelf COCO detector it scores **-0.17**. A second dataset (MMPTrack) and a three-detector study followed: detection is most of the remaining gap, and a detector fine-tuned on the same rooms lifts MOTA from 0.52 to 0.76 ([Real-data results](#real-data-results-wildtrack), [Second scene](#second-scene-results-mmptrack), [Detector study](#detector-study-mmptrack), [Limitations](#limitations)).
 
 ```text
 $ python examples/demo.py          # two cameras, two people; one person starts sprinting
@@ -190,7 +190,7 @@ Pre-registered in [docs/PROTOCOL_REAL.md](docs/PROTOCOL_REAL.md), tuned on the f
 
 - The synthetic MOTA of 0.93 to 0.96 did not transfer.
 - With perfect boxes, fusion beats the median single camera by 0.21, and gating matters (removing it costs 0.11 MOTA and nearly triples identity switches). Most of the false positives are coasting tracks reported after identity is lost.
-- With a real detector, false positives dominate (4,555 on 4,733 person-frames) and **fusion loses to the best single camera**. The tracker starts a track from any unmatched box, so errors add across cameras. I did not test a stricter spawning rule.
+- With a real detector, false positives dominate (4,555 on 4,733 person-frames) and **fusion loses to the best single camera**. The tracker starts a track from any unmatched box, so errors add across cameras. A stricter spawning rule was tested later and helped little (next section).
 - The 12 m/s plausibility flag never fired at 2 frames per second; an exploratory 4 m/s ceiling flagged only tracks near errors but caught 23 to 34% of identity switches.
 - Dataset copy from an unofficial mirror (the official host was unreachable); nothing from it is committed.
 
@@ -224,7 +224,7 @@ Pre-registered in [docs/PROTOCOL_DETECTORS.md](docs/PROTOCOL_DETECTORS.md); thre
 
 ## Limitations
 
-- **Two real datasets, mixed answers.** Wildtrack (crowded, 2 frames per second) and three MMPTrack sequences (about 7 people, about 5 frames per second); one off-the-shelf detector; no PETS 2009. The synthetic scene overstated performance, and the Wildtrack figures understate what the tracker does on an easier scene.
+- **Two real datasets, mixed answers.** Wildtrack (crowded, 2 frames per second) and three MMPTrack sequences (about 7 people, about 5 frames per second); two off-the-shelf detectors and one fine-tuned on the test rooms; no PETS 2009. The synthetic scene overstated performance, and the Wildtrack figures understate what the tracker does on an easier scene.
 - **Detection quality dominates.** With clean boxes the tracker scores MOTA 0.996 on MMPTrack; with a COCO detector 0.52 to 0.60, and a detector fine-tuned on the same rooms reaches 0.76, so most of the loss is detection. Generalising to an unseen site is untested.
 - **Track-creation rules matter little.** A stricter confirmation rule and a camera-consensus rule (`confirm_frames`, `report_coasting`, `confirm_cameras`, defaults reproduce the original) changed MOTA by +0.02 to +0.04 on MMPTrack; most of the Wildtrack gain came from reporting only live tracks.
 - **Constant-velocity motion.** Sharp turns and stops are modelled only through process noise.
@@ -232,7 +232,7 @@ Pre-registered in [docs/PROTOCOL_DETECTORS.md](docs/PROTOCOL_DETECTORS.md); thre
 - **No appearance.** Geometry only, so crossing targets can swap identities.
 - **Flat ground plane assumed**, with bottom-centre foot points; occluded feet bias them.
 - **Linear measurement, so a plain Kalman filter.** An extended Kalman filter would only be needed to filter in pixel space; not implemented.
-- **No real detector, no IDF1, no bird's-eye-view renderer, no drift-detection recall measurement yet.**
+- **No bird's-eye-view renderer and no drift-detection recall measurement yet.**
 
 ## Known gaps against the original roadmap
 
@@ -248,17 +248,17 @@ The project began as an item in a longer roadmap that named a larger stack and s
 
 ### What runs where
 
-Everything runs locally on a CPU; the benchmark takes about a minute. There is no detector, GPU or network involved.
+The synthetic benchmark and the tests run on a CPU in about a minute, with no detector, GPU or network. The real-data studies run the detectors on a GPU (CUDA PyTorch); the three-detector study took several hours of fine-tuning and of detection on a laptop GPU.
 
 ### Data and keys
 
-No keys. The synthetic benchmark needs no data. The real-data study needs the Wildtrack dataset (about 6.8 GB, research use, cite Chavdarova et al., CVPR 2018) and downloads COCO detector weights from pytorch.org; both stay in git-ignored `data/` and are never committed. The extra dependencies (PyTorch, torchvision) are only needed to re-run the detector.
+No keys. The synthetic benchmark needs no data. The real-data study needs the Wildtrack dataset (about 6.8 GB, research use, cite Chavdarova et al., CVPR 2018) and downloads COCO detector weights from pytorch.org; both stay in git-ignored `data/` and are never committed. The second-scene and detector studies use three MMPTrack scenes from an unofficial mirror and a Faster R-CNN fine-tuned on them (weights not committed); the scripts are in `scripts/` and the order is in the protocol docs. The extra dependencies (PyTorch, torchvision) are only needed to re-run the detectors.
 
 ### Verify the claims (a reviewer's path)
 
 ```bash
 pytest -q                          # 22 passed, includes a test that two cameras beat one in the overlap scene
-mypy src tests scripts             # strict, clean
+mypy src tests                     # strict, clean (the study scripts in scripts/ are not type-checked)
 python examples/demo.py            # the tracks and flags shown at the top
 python scripts/benchmark.py        # the table above (10 seeds x 6 settings)
 ```
