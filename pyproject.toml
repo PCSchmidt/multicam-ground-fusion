@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "multicam-ground-fusion"
-version = "0.3.0"
+version = "0.4.0"
 description = "Multi-camera ground-plane tracking: homography projection, Kalman fusion, Mahalanobis-gated Hungarian association, physical-plausibility drift flags."
 readme = "README.md"
 requires-python = ">=3.11"

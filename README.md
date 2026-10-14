@@ -207,10 +207,25 @@ Pre-registered in [docs/PROTOCOL_SECOND_SCENE.md](docs/PROTOCOL_SECOND_SCENE.md)
 - With the detector, the stricter rule gained only 0.02 (I had predicted 0.3); fusion beat the median single camera in all three sequences and the best single camera in two of three.
 - The dataset copy is from an unofficial mirror, calibration conventions were inferred, and nothing from it is committed.
 
+## Detector study (MMPTrack)
+
+Pre-registered in [docs/PROTOCOL_DETECTORS.md](docs/PROTOCOL_DETECTORS.md); three detectors on three fresh sequences (4, 5 and 6 cameras), run once. Full numbers and the seven hypotheses: [docs/RESULTS_DETECTORS.md](docs/RESULTS_DETECTORS.md).
+
+| Detector | MOTA, config B [95%] | At 1.0 m | IDF1 |
+| --- | --- | --- | --- |
+| COCO Faster R-CNN | 0.524 [0.465, 0.582] | 0.801 | 0.403 |
+| COCO RetinaNet | 0.594 [0.557, 0.631] | 0.819 | 0.401 |
+| Faster R-CNN fine-tuned on the same rooms (earlier session) | 0.759 [0.730, 0.784] | 0.786 | 0.452 |
+| Dataset's own boxes | 0.986 [0.979, 0.992] | 0.991 | 0.858 |
+
+- The detector is most of the gap: fine-tuning raises MOTA by 0.235 [0.164, 0.304] and nearly removes the localisation loss; a second COCO architecture adds only 0.07. Five of seven hypotheses held.
+- Two did not: with the fine-tuned detector, fusion beat the best single camera in only one of three sequences (a single camera scored 0.97 in the lobby), and camera consensus still helped (+0.021).
+- This tests adapting a detector to a site, not generalising to a new one; two score thresholds sit at the edge of the grid.
+
 ## Limitations
 
 - **Two real datasets, mixed answers.** Wildtrack (crowded, 2 frames per second) and three MMPTrack sequences (about 7 people, about 5 frames per second); one off-the-shelf detector; no PETS 2009. The synthetic scene overstated performance, and the Wildtrack figures understate what the tracker does on an easier scene.
-- **Detection quality dominates.** With clean boxes the tracker scores MOTA 0.996 on MMPTrack; with a COCO detector 0.57 to 0.60, and most of the loss is false positives and localisation (MOTA 0.84 to 0.87 at a 1 m match threshold). A better or scene-tuned detector is untested.
+- **Detection quality dominates.** With clean boxes the tracker scores MOTA 0.996 on MMPTrack; with a COCO detector 0.52 to 0.60, and a detector fine-tuned on the same rooms reaches 0.76, so most of the loss is detection. Generalising to an unseen site is untested.
 - **Track-creation rules matter little.** A stricter confirmation rule and a camera-consensus rule (`confirm_frames`, `report_coasting`, `confirm_cameras`, defaults reproduce the original) changed MOTA by +0.02 to +0.04 on MMPTrack; most of the Wildtrack gain came from reporting only live tracks.
 - **Constant-velocity motion.** Sharp turns and stops are modelled only through process noise.
 - **One fixed noise level.** Real ground-plane error grows with distance from the camera; per-detection covariance from the homography's Jacobian is the obvious next step. This is the main risk for real data, as the tuning story above shows.
@@ -254,6 +269,8 @@ python scripts/benchmark.py        # the table above (10 seeds x 6 settings)
 | --- | --- |
 | [docs/RESULTS.md](docs/RESULTS.md) | the synthetic protocol, the table, the noise-model finding |
 | [docs/PROTOCOL_REAL.md](docs/PROTOCOL_REAL.md), [docs/RESULTS_REAL.md](docs/RESULTS_REAL.md) | the pre-registered Wildtrack study and its results |
+| [docs/PROTOCOL_SECOND_SCENE.md](docs/PROTOCOL_SECOND_SCENE.md), [docs/RESULTS_SECOND_SCENE.md](docs/RESULTS_SECOND_SCENE.md) | the MMPTrack study |
+| [docs/PROTOCOL_DETECTORS.md](docs/PROTOCOL_DETECTORS.md), [docs/RESULTS_DETECTORS.md](docs/RESULTS_DETECTORS.md) | the three-detector study |
 | [examples/demo.py](examples/demo.py) | the worked example above |
 | [src/multicam_fusion/tracker.py](src/multicam_fusion/tracker.py) | association, Kalman update, track life and flags |
 
