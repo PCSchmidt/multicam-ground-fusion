@@ -159,3 +159,24 @@ The previous text is kept as `multicam-ground-fusion.v1draft.md`. All ten fixes 
 Also removed: the edge-case table (replaced by a short paragraph), the SiteWatch AI folder name and the defense-interest sentence, the "unofficial copies" caveat is stated once in the data chapter and once in the opening. Pictures regenerated with a matplotlib script kept outside the repo and viewed after rendering (no clipped text): the parts picture (speed ceiling wording), the results picture ("COCO" replaced by "off-the-shelf", clearer footnote; bar values unchanged: 0.793, minus 0.169, 0.524, 0.594, 0.759, 0.986), and the fixed-versus-learned picture (Kalman filter wording made plain).
 
 Not re-verified: no study was re-run; numbers are from the committed result files.
+
+---
+
+## Author answers folded in, 2026-11-05
+
+Source: answers appended to the 13 questions in multicam-ground-fusion.questions.md. Label: Author says. Repo clone re-pulled (HEAD 90cd5b9, the explainer files; the project's own last commit is ef62dce).
+
+- Q1: Author says it was built as a natural extension, a good idea and interesting to him. README Motivation names sitework-ai (SiteWatch AI) as the step before; guide links them on that basis.
+- Q2: Unsure whether the simulated-versus-real mismatch surprised him; does not say what was hardest. Stated as unsure.
+- Q3: Not finished; unsure what he would change; time is not a blocker; backlog choices not made. Guide's "finished" wording and its milestone-as-decision removed.
+- Q4: Understands some parts of all three (Kalman filter, Hungarian algorithm, block bootstrap). Stated.
+- Q5: Author says nobody else has run or used it. Guide attributes this to him.
+- Q6: Author says the AI coding agents drafted the protocols and predictions and he reviewed and approved. Finding: the README's first-person wording ("the protocol is mine", "I wrote both before seeing numbers", "I had predicted 0.3", and PROTOCOL_REAL.md "one author, who wrote the tracker and the protocol") differs from this. Guide states the difference plainly, without blame, and no longer says or implies he wrote them.
+- Q7: "AI coding agents" wording is fine; unchanged.
+- Q8: Answer reads "If i catch a mistake or want to change focus, yet"; "yet" is probably a typo for "yes" (ambiguous). Recorded as: he says he overrides an agent when he catches a mistake or wants to change focus. Whether he overrode one here, and who found the type-checker README error, are not answered.
+- Q9: Does not recall what he decided (dataset choice, mirrors, fine-tuning recipe, thresholds, 0.5 m rule). Wording crediting him removed; stated as not recalled.
+- Q10: Defers to recommendation on mirror naming. Unsure of the licence terms of Wildtrack, MMPTrack and the torchvision weights; says not a commercial-use project (his statement). The guide has not checked the terms.
+- Q11: His stated objective was the best state-of-the-art CV detector; defers to recommendations. Guide does not claim Faster R-CNN or RetinaNet meet it.
+- Q12: Does not recall why the fine-tuning recipe is two passes. Stated.
+- Q13: Unsure which interview answers to rephrase; has not studied it yet. Interview chapter says so; answers not rewritten.
+- Removed: wording crediting him with directing scope, plan, architecture and preferences; "I chose", "I designed", "I expected" and "I would" statements not supported by his answers.
